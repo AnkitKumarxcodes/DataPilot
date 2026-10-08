@@ -1,0 +1,17 @@
+[project]
+name = "dataagent"
+version = "0.1.0"
+description = "End-to-end Data Agent"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.142.2",
+    "langchain",
+    "langchain-google-genai",
+    "langchain-groq",
+    "langchain-openrouter",
+    "langgraph",
+    "pydantic>=2.12.5",
+    "python-dotenv>=1.2.4",
+    "uvicorn>=0.54.0",
+]
