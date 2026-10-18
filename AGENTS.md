@@ -78,3 +78,41 @@ Before making substantial changes:
 - preserve working code unless the change requires otherwise.
 
 Do not make large changes across the repository unless I explicitly request it.
+
+## Current Project State
+
+- This remains a learning project for an end-to-end Data Agent; keep changes
+  incremental and explain concepts before expanding features.
+- Database configuration is loaded by `load_db_config_from_env()` in
+  `utils/database.py`. It supports `DB_DIALECT` (`postgresql` by default, or
+  `mysql`) and `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME`.
+  URLs use SQLAlchemy `URL.create()` with an allowlisted driver. Never record
+  credential values here; generic names such as `USERNAME` collide with
+  Windows environment variables.
+- `models/schema.py` defines a Pydantic `AgentState` with usable defaults and a
+  list reducer for messages. `user_input` is a plain string field.
+- `utils/database.py` owns a SQLAlchemy engine, supports PostgreSQL through
+  psycopg2 and MySQL through PyMySQL, and uses SQLAlchemy inspection for table,
+  column, primary-key, and foreign-key details. It can include up to five sample
+  rows by default; values are stringified and truncated to 50 characters.
+  `sample_rows=0` disables sampling. Sample rows may contain personal data and
+  are included in the LLM prompt by the current SQL analyst flow, so use the
+  zero-sample option when that data should not leave the database environment.
+  Dispose the engine with `dispose()` or the context manager.
+- `agents/sql_analyst.py` chooses `public` for PostgreSQL and the default schema
+  for MySQL, then includes the connected database dialect in its SQL prompt.
+  It generates SQL but does not execute it. `feed_db.py` creates the same
+  PostgreSQL or MySQL tables with SQLAlchemy Core and loads CSV data in batches.
+  The destination database must already exist, and the seeder does not clear
+  existing rows before loading.
+- `.env.example` documents database, LLM, and Ollama settings. `.env` is ignored
+  by Git; never put real credentials in the example file or source code.
+- Dependencies: SQLAlchemy 2.x provides engine/URL/reflection support;
+  PyMySQL is the pure-Python MySQL driver; psycopg2-binary remains the
+  PostgreSQL driver; pytest is a development dependency.
+- `uv run pytest` passed all seven tests, including SQLite schema/configuration
+  checks and a CSV seeding test. The actual five CSV files also loaded into an
+  in-memory SQLite database. No live MySQL or PostgreSQL seeding run has been
+  done. Existing work is uncommitted; inspect `git status` before further edits.
+- Next: continue the current Data Agent phase; query validation and execution
+  remain out of scope.

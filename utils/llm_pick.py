@@ -1,6 +1,5 @@
 import os
 from dotenv import load_dotenv
-load_dotenv()  # Load environment variables from .env file
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
@@ -12,6 +11,7 @@ def pick_llm(level: str):
 
     Each provider reads its API key from the matching environment variable.
     """
+    load_dotenv()
     normalized_level = level.lower()
 
     if normalized_level == "low":
