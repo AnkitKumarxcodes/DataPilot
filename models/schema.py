@@ -44,3 +44,20 @@ class judgeSchema(BaseModel):
     comments: str = Field(
         default="", description="Comments explaining the safety judgment."
     )
+
+class ETLAgentSchema(BaseModel):
+    message: Annotated[list[BaseMessage], add] = Field(
+            default_factory=list,
+            description="Messages exchanged during agent processing.",
+        )
+
+class RouterSchema(BaseModel):
+    answer: Literal["sql", "etl"] = Field(... , description = "Indicates whether the user's question is related to SQL or ETL operations")
+    comments: str = Field(... , description = "Additional comments or feedbacks regarding classication of query")
+
+class DataAgentSchema(BaseModel):
+    message: Annotated[list[BaseMessage], add] = Field(
+                default_factory=list,
+                description="Messages exchanged during agent processing.",
+            )
+    route_response : str = Field(... , description="The response from the router indicating where ETl operation or SQl query should be carried out")

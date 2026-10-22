@@ -4,7 +4,7 @@ import sys
 from dotenv import load_dotenv
 load_dotenv()
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage , AIMessage
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -13,14 +13,33 @@ from utils.database import DatabaseUtil, load_db_config_from_env
 from utils.llm_pick import pick_llm
 
 
+def _response_text(content: object) -> str:
+    """Convert common LangChain text response formats to a plain string."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        text_blocks = [
+            block["text"]
+            for block in content
+            if isinstance(block, dict)
+            and block.get("type") == "text"
+            and isinstance(block.get("text"), str)
+        ]
+        if text_blocks:
+            return "\n".join(text_blocks)
+    raise TypeError(f"Unexpected LLM response content: {type(content).__name__}")
+
+
 def curate_question(state: AgentState) -> AgentState:
     llm = pick_llm("low")
     response = llm.invoke(
         "Curate the following user input into a clear and concise question: "
         f"{state.user_input}"
     )
-    state.curated_ques = response.content
-    state.message += [HumanMessage(content=state.curated_ques)]
+
+    curated_question = _response_text(response.content)
+    state.curated_ques = curated_question
+    state.message.append(HumanMessage(content=curated_question))
     return state
 
 
@@ -73,9 +92,9 @@ Return only valid JSON with exactly these keys:
 def generate_sql_query(state: AgentState) -> AgentState:
     """Generate a SQL query based on the curated question and schema context."""
     llm = pick_llm("medium")
-    response = llm.invoke(state.prompt_query_context)
+    response = _response_text(llm.invoke(state.prompt_query_context).content)
     try:
-        generated = json.loads(response.content)
+        generated = json.loads(response)
         state.generated_sql_query = generated["sql_query"]
         state.is_safe = generated.get("is_safe", "No")
     except (json.JSONDecodeError, TypeError, KeyError):
@@ -151,6 +170,9 @@ def execute_query(state: AgentState) -> AgentState:
 
 def represent_final_ans(state: AgentState) -> AgentState:
     """Format the final answer to be returned to the user."""
+    if state.is_safe != "Yes":
+        return state
+
     execution_result = state.sql_query_execution_result
     curated_question = state.curated_ques
     llm = pick_llm("low")
@@ -164,8 +186,9 @@ def represent_final_ans(state: AgentState) -> AgentState:
         {curated_question} 
         """
 
-    response = llm.invoke(prompt).content
+    response = _response_text(llm.invoke(prompt).content)
 
-    state.final_answer = response
+    state.final_ans = response
+    state.message = state.message + [AIMessage(content = f"{response}")]
 
     return state

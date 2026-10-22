@@ -166,24 +166,17 @@ class DatabaseUtil:
             return f"Error retrieving schema details: {exc}\n"
 
     def execute_sql(self, sql_query: str) -> str:
-        """
-        Execute the prompted SQL query
-        """
-        try:
-            connection = self.connection
-            cursor = connection.cursor()
-            cursor.execute(sql_query)
-            results = cursor.fetchall()
-            connection.commit()
-            return str(results)
-        except Exception as e:
-            print(f"Error executing  query: {e}")
-            return None
-        finally:
-            if cursor:
-                cursor.close()
-            if connection:
-                connection.close()
+        """Execute SQL with the configured MySQL or PostgreSQL engine."""
+        if not sql_query.strip():
+            raise ValueError("SQL query must not be empty.")
+
+        with self.engine.connect() as connection:
+            result = connection.execute(text(sql_query))
+            if not result.returns_rows:
+                return f"Query executed successfully ({result.rowcount} rows affected)."
+
+            rows = [tuple(row) for row in result.fetchall()]
+            return str(rows)
 
     @staticmethod
     def _truncate(value: str, max_length: int = 50) -> str:
